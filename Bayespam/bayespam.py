@@ -79,7 +79,8 @@ class Bayespam():
             message_list = []
             print("Error: input parameter message_type should be MessageType.REGULAR or MessageType.SPAM")
             exit()
-
+        
+        punctuations = '''|=!()-[]{};:'"\,<>./?@#$%^&*_~1234567890\n\t'''
         for msg in message_list:
             try:
                 # Make sure to use latin1 encoding, otherwise it will be unable to read some of the messages
@@ -91,18 +92,24 @@ class Bayespam():
                     split_line = line.split(" ")
                     # Loop through the tokens
                     for idx in range(len(split_line)):
-                        token = split_line[idx]
+                        
+                        token = ""
+                        for char in split_line[idx]:
+                            if char not in punctuations:
+                                token += char
+                        token = token.lower()
+                      
+                        if (len(token) >= 4):
+                            if token in self.vocab.keys():
+                                # If the token is already in the vocab, retrieve its counter
+                                counter = self.vocab[token]
+                            else:
+                                # Else: initialize a new counter
+                                counter = Counter()
 
-                        if token in self.vocab.keys():
-                            # If the token is already in the vocab, retrieve its counter
-                            counter = self.vocab[token]
-                        else:
-                            # Else: initialize a new counter
-                            counter = Counter()
-
-                        # Increment the token's counter by one and store in the vocab
-                        counter.increment_counter(message_type)
-                        self.vocab[token] = counter
+                            # Increment the token's counter by one and store in the vocab
+                            counter.increment_counter(message_type)
+                            self.vocab[token] = counter
             except Exception as e:
                 print("Error while reading message %s: " % msg, e)
                 exit()
@@ -203,8 +210,7 @@ def main():
         else:
             counter.pSpam = m.log(0.1/n_words_regular + n_words_spam, 10)
         
-        print(counter.pRegular, ' ', counter.pSpam)
-    
+        # print(counter.pRegular, ' ', counter.pSpam)
 
     """
     Now, implement the follow code yourselves:
