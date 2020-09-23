@@ -67,6 +67,8 @@ class Bayespam():
             print("Error: directory %s should contain a folder named 'spam'." % path)
             exit()
 
+    # filters test data by removing punctuation, numbers,
+    # words with length < 3, and converts to lower case
     def read_file(self, file):
         f = open(file, 'r', encoding='latin1')
         punctuations = '''|=!()-[]{};:'"\,<>./?@#$%^&*_~1234567890\n\t'''
@@ -82,6 +84,7 @@ class Bayespam():
                 if (len(token) >= 4):
                     token_list.append(token)
         return token_list
+
 
     def read_messages(self, message_type):
         """
@@ -99,6 +102,7 @@ class Bayespam():
             print("Error: input parameter message_type should be MessageType.REGULAR or MessageType.SPAM")
             exit()
         
+        # punctuation to remove
         punctuations = '''|=!()-[]{};:'"\,<>./?@#$%^&*_~1234567890\n\t'''
         for msg in message_list:
             try:
@@ -112,13 +116,14 @@ class Bayespam():
                     # Loop through the tokens
                     for idx in range(len(split_line)):
                         
+                        # filter out punctuation
                         token = ""
                         for char in split_line[idx]:
                             if char not in punctuations:
                                 token += char
-                        token = token.lower()
+                        token = token.lower() # convert to lower case
                       
-                        if (len(token) >= 4):
+                        if (len(token) >= 4): # only add to vocab if length >= 4
                             if token in self.vocab.keys():
                                 # If the token is already in the vocab, retrieve its counter
                                 counter = self.vocab[token]
@@ -194,6 +199,20 @@ def main():
 
     # bayespam.print_vocab()
     bayespam.write_vocab("vocab.txt")
+
+      """
+    Now, implement the follow code yourselves:
+    1) A priori class probabilities must be computed from the number of regular and spam messages
+    2) The vocabulary must be clean: punctuation and digits must be removed, case insensitive
+    3) Conditional probabilities must be computed for every word
+    4) Zero probabilities must be replaced by a small estimated value
+    5) Bayes rule must be applied on new messages, followed by argmax classification
+    6) Errors must be computed on the test set (FAR = false accept rate (misses), FRR = false reject rate (false alarms))
+    7) Improve the code and the performance (speed, accuracy)
+    
+    Use the same steps to create a class BigramBayespam which implements a classifier using a vocabulary consisting of bigrams
+    """
+
     # 1) Computing a priori class probablities
     n_messages_regular = len(bayespam.regular_list)
     n_messages_spam = len(bayespam.spam_list)
@@ -206,6 +225,7 @@ def main():
     # Count total number of words contained in regular/spam mail
     n_words_regular = 0
     n_words_spam = 0
+
     for word, counter in bayespam.vocab.items():
         n_words_regular += counter.counter_regular
         n_words_spam += counter.counter_spam
@@ -221,17 +241,23 @@ def main():
         else:
             counter.pSpam = m.log(sys.float_info.epsilon/(n_words_regular + n_words_spam), 10)
         
+    # initialise variables
     correctRegular = 0
     falseRegular = 0
     correctSpam = 0
     falseSpam = 0
     
+    # open test data
     test_path = args.test_path
     bayespam.list_dirs(test_path)
 
+    # number of messages
     allMsg = len(bayespam.regular_list) + len(bayespam.spam_list)
 
+    # loop through regular messages 
     for msg in bayespam.regular_list:
+
+        # calculate probabilities
         p_reg_msg = pRegular + (1/allMsg)
         p_spam_msg = pSpam + (1/allMsg)
         
@@ -240,49 +266,36 @@ def main():
                 p_reg_msg += bayespam.vocab.get(token).pRegular
                 p_spam_msg += bayespam.vocab.get(token).pSpam
 
+        # increment corresponding counter depending on found probability
         if (p_reg_msg > p_spam_msg):
             correctRegular += 1
         else:
             falseSpam += 1
 
+    # loop through spam messages 
     for msg in bayespam.spam_list:
+
+        # calculate probabilities
         p_reg_msg = pRegular + (1/allMsg)
         p_spam_msg = pSpam + (1/allMsg)
         
         f = open(msg, 'r', encoding='latin1')
 
-        for token in f: #bayespam.read_file(msg):
+        for token in f: 
             if (token in bayespam.vocab):
                 p_reg_msg += bayespam.vocab.get(token).pRegular
                 p_spam_msg += bayespam.vocab.get(token).pSpam
+
+        # increment corresponding counter depending on found probability
         if (p_reg_msg > p_spam_msg):
             falseRegular += 1
         else:
             correctSpam += 1
 
+    # calculate sensitivity and specificity
     sensitivity = correctRegular/(correctRegular + falseSpam)
     specificity = correctSpam/(correctSpam + falseRegular)
     print("sensitivity = ", sensitivity, " specificity = ", specificity)
-    # correct_accept_rate = correctRegular / float(allMsg)
-    # correct_reject_rate = correctSpam / float(allMsg)
-    # false_accept_rate = falseRegular / float(allMsg)
-    # false_reject_rate = falseSpam / float(allMsg)
-    # print("CAR = ", correct_accept_rate, " CRR = ", correct_reject_rate, 
-    # " FAR = ", false_accept_rate, " FRR = ", false_reject_rate)
-    # print("Performance: ", (correctRegular + correctSpam)/ allMsg * 100)
-
-    """
-    Now, implement the follow code yourselves:
-    1) A priori class probabilities must be computed from the number of regular and spam messages
-    2) The vocabulary must be clean: punctuation and digits must be removed, case insensitive
-    3) Conditional probabilities must be computed for every word
-    4) Zero probabilities must be replaced by a small estimated value
-    5) Bayes rule must be applied on new messages, followed by argmax classification
-    6) Errors must be computed on the test set (FAR = false accept rate (misses), FRR = false reject rate (false alarms))
-    7) Improve the code and the performance (speed, accuracy)
-    
-    Use the same steps to create a class BigramBayespam which implements a classifier using a vocabulary consisting of bigrams
-    """
 
 if __name__ == "__main__":
     main()
