@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 
 from enum import Enum
 import math as m
@@ -13,6 +14,8 @@ class Counter():
     def __init__(self):
         self.counter_regular = 0
         self.counter_spam = 0
+        self.pRegular = 0
+        self.pSpam = 0
 
     def increment_counter(self, message_type):
         """
@@ -63,6 +66,22 @@ class Bayespam():
         except FileNotFoundError:
             print("Error: directory %s should contain a folder named 'spam'." % path)
             exit()
+
+    def read_file(self, file):
+        f = open(file, 'r', encoding='latin1')
+        punctuations = '''|=!()-[]{};:'"\,<>./?@#$%^&*_~1234567890\n\t'''
+        token_list = []
+        for line in f:
+            split_line = line.split(" ")
+            for idx in range(len(split_line)):
+                token = ""
+                for char in split_line[idx]:
+                    if char not in punctuations:
+                        token += char
+                token = token.lower()
+                if (len(token) >= 4):
+                    token_list.append(token)
+        return token_list
 
     def read_messages(self, message_type):
         """
@@ -150,8 +169,6 @@ class Bayespam():
         except Exception as e:
             print("An error occurred while writing the vocab to a file: ", e)
 
-
-
 def main():
     # We require the file paths of the training and test sets as input arguments (in that order)
     # The argparse library helps us cleanly parse input arguments
@@ -177,10 +194,6 @@ def main():
 
     # bayespam.print_vocab()
     bayespam.write_vocab("vocab.txt")
-
-    print("N regular messages: ", len(bayespam.regular_list))
-    print("N spam messages: ", len(bayespam.spam_list))
-
     # 1) Computing a priori class probablities
     n_messages_regular = len(bayespam.regular_list)
     n_messages_spam = len(bayespam.spam_list)
@@ -197,20 +210,66 @@ def main():
         n_words_regular += counter.counter_regular
         n_words_spam += counter.counter_spam
 
-    print(n_words_regular, ' ' , n_words_spam)
-
     for word, counter in bayespam.vocab.items():
         if (counter.counter_regular > 0):
             counter.pRegular = m.log(counter.counter_regular/n_words_regular, 10)
         else:
-            counter.pRegular = m.log(0.1/n_words_regular + n_words_regular, 10)
+            counter.pRegular = m.log(sys.float_info.epsilon/(n_words_regular + n_words_spam), 10)
 
         if (counter.counter_spam > 0):
             counter.pSpam = m.log(counter.counter_spam/n_words_spam, 10)
         else:
-            counter.pSpam = m.log(0.1/n_words_regular + n_words_spam, 10)
+            counter.pSpam = m.log(sys.float_info.epsilon/(n_words_regular + n_words_spam), 10)
         
-        # print(counter.pRegular, ' ', counter.pSpam)
+    correctRegular = 0
+    falseRegular = 0
+    correctSpam = 0
+    falseSpam = 0
+    
+    test_path = args.test_path
+    bayespam.list_dirs(test_path)
+
+    allMsg = len(bayespam.regular_list) + len(bayespam.spam_list)
+
+    for msg in bayespam.regular_list:
+        p_reg_msg = pRegular + (1/allMsg)
+        p_spam_msg = pSpam + (1/allMsg)
+        
+        for token in bayespam.read_file(msg):
+            if (token in bayespam.vocab):
+                p_reg_msg += bayespam.vocab.get(token).pRegular
+                p_spam_msg += bayespam.vocab.get(token).pSpam
+
+        if (p_reg_msg > p_spam_msg):
+            correctRegular += 1
+        else:
+            falseSpam += 1
+
+    for msg in bayespam.spam_list:
+        p_reg_msg = pRegular + (1/allMsg)
+        p_spam_msg = pSpam + (1/allMsg)
+        
+        f = open(msg, 'r', encoding='latin1')
+
+        for token in f: #bayespam.read_file(msg):
+            if (token in bayespam.vocab):
+                p_reg_msg += bayespam.vocab.get(token).pRegular
+                p_spam_msg += bayespam.vocab.get(token).pSpam
+        if (p_reg_msg > p_spam_msg):
+            falseRegular += 1
+        else:
+            correctSpam += 1
+
+    sensitivity = correctRegular/(correctRegular + falseSpam)
+    specificity = correctSpam/(correctSpam + falseRegular)
+    print("sensitivity = ", sensitivity, " specificity = ", specificity)
+    # correct_accept_rate = correctRegular / float(allMsg)
+    # correct_reject_rate = correctSpam / float(allMsg)
+    # false_accept_rate = falseRegular / float(allMsg)
+    # false_reject_rate = falseSpam / float(allMsg)
+    # print("CAR = ", correct_accept_rate, " CRR = ", correct_reject_rate, 
+    # " FAR = ", false_accept_rate, " FRR = ", false_reject_rate)
+    # print("Performance: ", (correctRegular + correctSpam)/ allMsg * 100)
 
     """
     Now, implement the follow code yourselves:
