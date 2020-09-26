@@ -5,9 +5,11 @@ import sys
 from enum import Enum
 import math as m
 
+
 class MessageType(Enum):
     REGULAR = 1,
     SPAM = 2
+
 
 class Counter():
 
@@ -29,12 +31,18 @@ class Counter():
         else:
             self.counter_spam += 1
 
+
 class Bayespam():
 
     def __init__(self):
         self.regular_list = None
         self.spam_list = None
         self.vocab = {}
+        self.token = ""
+        self.bigrams = []
+        self.bigram_counter = 0
+        self.pair_counter = 0
+        self.bigram = ""
 
     def list_dirs(self, path):
         """
@@ -85,6 +93,30 @@ class Bayespam():
                     token_list.append(token)
         return token_list
 
+    def remove_punctuation(self):
+        punctuations = '''|=!()-[]{};:'"\,<>./?@#$%^&*_~1234567890\n\t'''  # punctuation to remove
+        for char in self.token:
+            if char not in punctuations:
+                self.token += char
+
+    def create_tokens(self, idx, line):
+        self.token = line[idx]
+        self.remove_punctutation()
+        self.token = self.token.lower()  # convert to lower case
+
+    def create_bigrams(self, token):
+        if self.pair_counter < 2:
+            self.pair_counter += 1
+            #print(token)
+            self.bigram += token
+            if self.pair_counter == 1:
+                self.bigram += " "
+        else:
+            self.pair_counter = 0
+            self.bigram_counter += 1
+            print(self.bigram)
+            self.bigrams.append(self.bigram)
+            self.bigram =""
 
     def read_messages(self, message_type):
         """
@@ -101,9 +133,7 @@ class Bayespam():
             message_list = []
             print("Error: input parameter message_type should be MessageType.REGULAR or MessageType.SPAM")
             exit()
-        
-        # punctuation to remove
-        punctuations = '''|=!()-[]{};:'"\,<>./?@#$%^&*_~1234567890\n\t'''
+
         for msg in message_list:
             try:
                 # Make sure to use latin1 encoding, otherwise it will be unable to read some of the messages
@@ -115,25 +145,24 @@ class Bayespam():
                     split_line = line.split(" ")
                     # Loop through the tokens
                     for idx in range(len(split_line)):
-                        
-                        # filter out punctuation
-                        token = ""
-                        for char in split_line[idx]:
-                            if char not in punctuations:
-                                token += char
-                        token = token.lower() # convert to lower case
-                      
-                        if (len(token) >= 4): # only add to vocab if length >= 4
-                            if token in self.vocab.keys():
+                        self.create_tokens(idx, split_line)
+
+                        self.create_bigrams(self.token)
+
+                        for x in self.bigrams:
+                            print(x)
+                        #print(self.bigrams.index(1))
+                        if len(self.token) >= 4:  # only add to vocab if length >= 4
+                            if self.token in self.vocab.keys():
                                 # If the token is already in the vocab, retrieve its counter
-                                counter = self.vocab[token]
+                                counter = self.vocab[self.token]
                             else:
                                 # Else: initialize a new counter
                                 counter = Counter()
 
                             # Increment the token's counter by one and store in the vocab
                             counter.increment_counter(message_type)
-                            self.vocab[token] = counter
+                            self.vocab[self.token] = counter
             except Exception as e:
                 print("Error while reading message %s: " % msg, e)
                 exit()
@@ -168,11 +197,16 @@ class Bayespam():
 
             for word, counter in vocab.items():
                 # repr(word) makes sure that special  characters such as \t (tab) and \n (newline) are printed.
-                f.write("%s | In regular: %d | In spam: %d\n" % (repr(word), counter.counter_regular, counter.counter_spam),)
+                f.write("%s | In regular: %d | In spam: %d\n" % (
+                    repr(word), counter.counter_regular, counter.counter_spam), )
 
             f.close()
         except Exception as e:
             print("An error occurred while writing the vocab to a file: ", e)
+
+    def remove_punctutation(self):
+        pass
+
 
 def main():
     # We require the file paths of the training and test sets as input arguments (in that order)
@@ -209,7 +243,7 @@ def main():
     5) Bayes rule must be applied on new messages, followed by argmax classification
     6) Errors must be computed on the test set (FAR = false accept rate (misses), FRR = false reject rate (false alarms))
     7) Improve the code and the performance (speed, accuracy)
-    
+
     Use the same steps to create a class BigramBayespam which implements a classifier using a vocabulary consisting of bigrams
     """
 
@@ -218,8 +252,8 @@ def main():
     n_messages_spam = len(bayespam.spam_list)
     n_messages_total = n_messages_regular + n_messages_spam
 
-    pRegular = m.log(n_messages_regular/n_messages_total, 10)
-    pSpam = m.log(n_messages_spam/n_messages_total, 10)
+    pRegular = m.log(n_messages_regular / n_messages_total, 10)
+    pSpam = m.log(n_messages_spam / n_messages_total, 10)
 
     # Computing class conditional word likelihoods
     # Count total number of words contained in regular/spam mail
@@ -232,21 +266,21 @@ def main():
 
     for word, counter in bayespam.vocab.items():
         if (counter.counter_regular > 0):
-            counter.pRegular = m.log(counter.counter_regular/n_words_regular, 10)
+            counter.pRegular = m.log(counter.counter_regular / n_words_regular, 10)
         else:
-            counter.pRegular = m.log(sys.float_info.epsilon/(n_words_regular + n_words_spam), 10)
+            counter.pRegular = m.log(sys.float_info.epsilon / (n_words_regular + n_words_spam), 10)
 
         if (counter.counter_spam > 0):
-            counter.pSpam = m.log(counter.counter_spam/n_words_spam, 10)
+            counter.pSpam = m.log(counter.counter_spam / n_words_spam, 10)
         else:
-            counter.pSpam = m.log(sys.float_info.epsilon/(n_words_regular + n_words_spam), 10)
-        
+            counter.pSpam = m.log(sys.float_info.epsilon / (n_words_regular + n_words_spam), 10)
+
     # initialise variables
     correctRegular = 0
     falseRegular = 0
     correctSpam = 0
     falseSpam = 0
-    
+
     # open test data
     test_path = args.test_path
     bayespam.list_dirs(test_path)
@@ -254,13 +288,13 @@ def main():
     # number of messages
     allMsg = len(bayespam.regular_list) + len(bayespam.spam_list)
 
-    # loop through regular messages 
+    # loop through regular messages
     for msg in bayespam.regular_list:
 
         # calculate probabilities
-        p_reg_msg = pRegular + (1/allMsg)
-        p_spam_msg = pSpam + (1/allMsg)
-        
+        p_reg_msg = pRegular + (1 / allMsg)
+        p_spam_msg = pSpam + (1 / allMsg)
+
         for token in bayespam.read_file(msg):
             if (token in bayespam.vocab):
                 p_reg_msg += bayespam.vocab.get(token).pRegular
@@ -272,16 +306,16 @@ def main():
         else:
             falseSpam += 1
 
-    # loop through spam messages 
+    # loop through spam messages
     for msg in bayespam.spam_list:
 
         # calculate probabilities
-        p_reg_msg = pRegular + (1/allMsg)
-        p_spam_msg = pSpam + (1/allMsg)
-        
+        p_reg_msg = pRegular + (1 / allMsg)
+        p_spam_msg = pSpam + (1 / allMsg)
+
         f = open(msg, 'r', encoding='latin1')
 
-        for token in f: 
+        for token in f:
             if (token in bayespam.vocab):
                 p_reg_msg += bayespam.vocab.get(token).pRegular
                 p_spam_msg += bayespam.vocab.get(token).pSpam
@@ -293,9 +327,10 @@ def main():
             correctSpam += 1
 
     # calculate sensitivity and specificity
-    sensitivity = correctRegular/(correctRegular + falseSpam)
-    specificity = correctSpam/(correctSpam + falseRegular)
+    sensitivity = correctRegular / (correctRegular + falseSpam)
+    specificity = correctSpam / (correctSpam + falseRegular)
     print("sensitivity = ", sensitivity, " specificity = ", specificity)
+
 
 if __name__ == "__main__":
     main()
