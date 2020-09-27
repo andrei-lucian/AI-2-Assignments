@@ -74,6 +74,10 @@ class Bayespam():
         f = open(file, 'r', encoding='latin1')
         punctuations = '''|=!()-[]{};:'"\,<>./?@##$%^&*_~1234567890\n\t'''
         token_list = []
+
+        bigram = ""
+        bigram_index = 0
+
         for line in f:
             split_line = line.split(" ")
             for idx in range(len(split_line)):
@@ -82,8 +86,22 @@ class Bayespam():
                     if char not in punctuations:
                         token += char
                 token = token.lower()
-                if len(token) >= 4:
-                    token_list.append(token)
+
+                if bigram_index == 0:
+                    bigram += token
+
+                if bigram_index == 1:
+                    bigram += " "
+                    bigram += token
+
+                if len(bigram) >= 6 and bigram_index == 1:
+                    token_list.append(bigram)
+
+                bigram_index += 1
+                if bigram_index > 1:
+                    bigram = ""
+                    bigram_index = 0
+
         return token_list
 
     def read_messages(self, message_type):
@@ -131,10 +149,9 @@ class Bayespam():
                         if bigram_index == 1:
                             bigram += " "
                             bigram += token
-                            print(bigram)
 
-                        if bigram_index > 1 and len(bigram) >= 6:  ## only add to vocab if length >= 4
-                            if token in self.vocab.keys():
+                        if bigram_index == 1 and len(bigram) >= 6:  ## only add to vocab if length >= 4
+                            if bigram in self.vocab.keys():
                                 ## If the token is already in the vocab, retrieve its counter
                                 counter = self.vocab[bigram]
                             else:
@@ -159,6 +176,7 @@ class Bayespam():
         Print each word in the vocabulary, plus the amount of times it occurs in regular and spam messages.
         :return: None
         """
+        print(len(self.vocab.items()))
         for word, counter in self.vocab.items():
             ## repr(word) makes sure that special characters such as \t (tab) and \n (newline) are printed.
             print("%s | In regular: %d | In spam: %d" % (repr(word), counter.counter_regular, counter.counter_spam))
@@ -213,7 +231,7 @@ def main():
     ## Parse the messages in the spam message directory
     bayespam.read_messages(MessageType.SPAM)
 
-    ## bayespam.print_vocab()
+    #bayespam.print_vocab()
     bayespam.write_vocab("vocab.txt")
 
     """
