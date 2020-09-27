@@ -292,10 +292,15 @@ def main():
         else:
             correctSpam += 1
 
+    
+    ## print confusion matrix
+    print("True positive rate: ", correctRegular/allMsg, "\t", "False positive rate: ", falseRegular/allMsg)
+    print("False negative rate: ", falseSpam/allMsg, "\t", "True negative rate: ", correctSpam/allMsg)
+    
     ## calculate sensitivity and specificity
     sensitivity = correctRegular/(correctRegular + falseSpam)
     specificity = correctSpam/(correctSpam + falseRegular)
     print("sensitivity = ", sensitivity, " specificity = ", specificity)
-
+ 
 if __name__ == "__main__":
     main()
