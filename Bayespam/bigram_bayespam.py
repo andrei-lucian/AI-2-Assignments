@@ -36,7 +36,10 @@ class Bayespam():
     def __init__(self):
         self.regular_list = None
         self.spam_list = None
+        self.pre_vocab = {}
         self.vocab = {}
+        self.minimum_word_size = 6
+        self.minimum_word_frecuency = 3
 
     def list_dirs(self, path):
         """
@@ -94,7 +97,7 @@ class Bayespam():
                     bigram += " "
                     bigram += token
 
-                if len(bigram) >= 6 and bigram_index == 1:
+                if len(bigram) >= self.minimum_word_size and bigram_index == 1:
                     token_list.append(bigram)
 
                 bigram_index += 1
@@ -141,31 +144,38 @@ class Bayespam():
                         for char in split_line[idx]:
                             if char not in punctuations:
                                 token += char
-                        token = token.lower()  ## convert to lower case
 
-                        if bigram_index == 0:
-                            bigram += token
+                        if not token.isspace() and not token == "":
+                            token = token.lower()  ## convert to lower case
 
-                        if bigram_index == 1:
-                            bigram += " "
-                            bigram += token
+                            if bigram_index == 0:
+                                bigram += token
 
-                        if bigram_index == 1 and len(bigram) >= 6:  ## only add to vocab if length >= 4
-                            if bigram in self.vocab.keys():
-                                ## If the token is already in the vocab, retrieve its counter
-                                counter = self.vocab[bigram]
-                            else:
-                                ## Else: initialize a new counter
-                                counter = Counter()
+                            if bigram_index == 1:
+                                bigram += " "
+                                bigram += token
 
-                            ## Increment the token's counter by one and store in the vocab
-                            counter.increment_counter(message_type)
-                            self.vocab[bigram] = counter
+                            if bigram_index == 1 and len(bigram) >= self.minimum_word_size:  ## only add to vocab if length >= to the minimal_word_size
+                                if bigram in self.pre_vocab.keys():
+                                    ## If the token is already in the vocab, retrieve its counter
+                                    counter = self.pre_vocab[bigram]
+                                else:
+                                    ## Else: initialize a new counter
+                                    counter = Counter()
 
-                        bigram_index += 1
-                        if bigram_index > 1:
-                            bigram = ""
-                            bigram_index = 0
+                                ## Increment the token's counter by one and store in the vocab
+                                counter.increment_counter(message_type)
+                                self.pre_vocab[bigram] = counter
+
+                                ## Put items from the pre_vocab in the actual vocab if the frequency >= to the minimum
+                                ## word frequency
+                                if counter.counter_regular + counter.counter_spam >= self.minimum_word_frecuency:
+                                    self.vocab[bigram] = counter
+
+                            bigram_index += 1
+                            if bigram_index > 1:
+                                bigram = ""
+                                bigram_index = 0
 
             except Exception as e:
                 print("Error while reading message %s: " % msg, e)
@@ -176,7 +186,6 @@ class Bayespam():
         Print each word in the vocabulary, plus the amount of times it occurs in regular and spam messages.
         :return: None
         """
-        print(len(self.vocab.items()))
         for word, counter in self.vocab.items():
             ## repr(word) makes sure that special characters such as \t (tab) and \n (newline) are printed.
             print("%s | In regular: %d | In spam: %d" % (repr(word), counter.counter_regular, counter.counter_spam))
@@ -209,6 +218,7 @@ class Bayespam():
 
 
 def main():
+
     ## We require the file paths of the training and test sets as input arguments (in that order)
     ## The argparse library helps us cleanly parse input arguments
     parser = argparse.ArgumentParser()
@@ -265,12 +275,12 @@ def main():
         n_words_spam += counter.counter_spam
 
     for word, counter in bayespam.vocab.items():
-        if (counter.counter_regular > 0):
+        if counter.counter_regular > 0:
             counter.pRegular = m.log(counter.counter_regular / n_words_regular, 10)
         else:
             counter.pRegular = m.log(sys.float_info.epsilon / (n_words_regular + n_words_spam), 10)
 
-        if (counter.counter_spam > 0):
+        if counter.counter_spam > 0:
             counter.pSpam = m.log(counter.counter_spam / n_words_spam, 10)
         else:
             counter.pSpam = m.log(sys.float_info.epsilon / (n_words_regular + n_words_spam), 10)
