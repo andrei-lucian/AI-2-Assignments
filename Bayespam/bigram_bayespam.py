@@ -39,7 +39,7 @@ class Bayespam():
         self.pre_vocab = {}
         self.vocab = {}
         self.minimum_word_size = 6
-        self.minimum_word_frecuency = 3
+        self.minimum_word_frecuency = 5
 
     def list_dirs(self, path):
         """
@@ -72,14 +72,14 @@ class Bayespam():
             exit()
 
     ## filters test data by removing punctuation, numbers,
-    ## words with length < 3, and converts to lower case
+    ## words with length < self.minimum_word_size, and converts to lower case
     def read_file(self, file):
         f = open(file, 'r', encoding='latin1')
         punctuations = '''|=!()-[]{};:'"\,<>./?@##$%^&*_~1234567890\n\t'''
         token_list = []
 
         bigram = ""
-        bigram_index = 0
+        bigram_counter = 0
 
         for line in f:
             split_line = line.split(" ")
@@ -90,20 +90,24 @@ class Bayespam():
                         token += char
                 token = token.lower()
 
-                if bigram_index == 0:
+                ## If no token has been added to the bigram add onne token
+                if bigram_counter == 0:
                     bigram += token
 
-                if bigram_index == 1:
+                ## If one token has been added to the bigram add another token
+                if bigram_counter == 1:
                     bigram += " "
                     bigram += token
 
-                if len(bigram) >= self.minimum_word_size and bigram_index == 1:
+                ## Add the token to the bigram list if it is complete and it is equal to the mininum_word_size
+                if len(bigram) >= self.minimum_word_size and bigram_counter == 1:
                     token_list.append(bigram)
 
-                bigram_index += 1
-                if bigram_index > 1:
+                ## If the bigram is complete and added to the token list, empty the bigram and reset the counter to 0
+                bigram_counter += 1
+                if bigram_counter > 1:
                     bigram = ""
-                    bigram_index = 0
+                    bigram_counter = 0
 
         return token_list
 
@@ -115,7 +119,7 @@ class Bayespam():
         :return: None
         """
         bigram = ""
-        bigram_index = 0
+        bigram_counter = 0
         if message_type == MessageType.REGULAR:
             message_list = self.regular_list
         elif message_type == MessageType.SPAM:
@@ -144,26 +148,29 @@ class Bayespam():
                         for char in split_line[idx]:
                             if char not in punctuations:
                                 token += char
-
+                        ## Make sure the tokens are not empty
                         if not token.isspace() and not token == "":
                             token = token.lower()  ## convert to lower case
 
-                            if bigram_index == 0:
+                            ## If no token has been added to the bigram add one token
+                            if bigram_counter == 0:
                                 bigram += token
 
-                            if bigram_index == 1:
+                            ## If one token has been added to the bigram add another token
+                            if bigram_counter == 1:
                                 bigram += " "
                                 bigram += token
 
-                            if bigram_index == 1 and len(bigram) >= self.minimum_word_size:  ## only add to vocab if length >= to the minimal_word_size
+                            ## If the bigram contains two tokens and if length >= to the minimal_word_size
+                            if bigram_counter == 1 and len(bigram) >= self.minimum_word_size:
                                 if bigram in self.pre_vocab.keys():
-                                    ## If the token is already in the vocab, retrieve its counter
+                                    ## If the bigram is already in the pre_vocab, retrieve its counter
                                     counter = self.pre_vocab[bigram]
                                 else:
                                     ## Else: initialize a new counter
                                     counter = Counter()
 
-                                ## Increment the token's counter by one and store in the vocab
+                                ## Increment the bigrams counter by one and store in the pre_vocab
                                 counter.increment_counter(message_type)
                                 self.pre_vocab[bigram] = counter
 
@@ -172,10 +179,12 @@ class Bayespam():
                                 if counter.counter_regular + counter.counter_spam >= self.minimum_word_frecuency:
                                     self.vocab[bigram] = counter
 
-                            bigram_index += 1
-                            if bigram_index > 1:
+
+                            bigram_counter += 1
+                            ## If the bigram is complete and added to the pre_vocab empty the bigram and reset the counter to 0
+                            if bigram_counter > 1:
                                 bigram = ""
-                                bigram_index = 0
+                                bigram_counter = 0
 
             except Exception as e:
                 print("Error while reading message %s: " % msg, e)
