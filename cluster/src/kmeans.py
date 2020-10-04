@@ -1,5 +1,4 @@
 import random
-import math
 """kmeans.py"""
 
 class Cluster:
@@ -22,7 +21,6 @@ class KMeans:
 
         # Threshold above which the corresponding html is prefetched
         self.prefetch_threshold = 0.5
-
         # An initialized list of k clusters
         self.clusters = [Cluster(dim) for _ in range(k)]
 
@@ -34,7 +32,7 @@ class KMeans:
         # implement k-means algorithm here:
         # Step 1: Select an initial random partioning with k clusters
         for i in range(len(self.traindata)):
-            self.clusters[random.randint(0, len(self.clusters)-1)].current_members.add(i)
+            self.clusters[random.randint(len(clusters))].current_members.append(i)
 
         # Calculate prototype and previousMembers for each cluster
         converged = False
@@ -42,34 +40,16 @@ class KMeans:
             for cluster in (self.clusters): # Loop through each cluster
                 for member in (cluster.current_members): # Loop through each member in each cluster
                     for j in range(200): 
-                        cluster.prototype[j] += self.traindata[member][j] # Add the member vector values to prototype                
+                        cluster.prototype[j] += self.traindata.get(member)[j] # Add the member vector values to prototype
                 for j in range(200):
-                    cluster.prototype[j] /= len(cluster.current_members) # Average prototype
-
+                    cluster.prototype /= len(cluster.current_members) # Average prototype
                 cluster.previous_members.clear() 
-                cluster.previous_members.update(cluster.current_members)
+                cluster.previous_members.append(cluster.current_members)
                 cluster.current_members.clear()
         
-        # Calculate distance of each data point to each cluster and reassign their positions accordingly
-            for i in range(len(self.traindata)):
-                minDistance = float('inf')
-                minCluster = 0
-                for k in range (len(self.clusters)):
-                    distance = 0
-                    for j in range(self.dim):
-                        distance += math.pow(self.traindata[i][j] - self.clusters[k].prototype[j], 2)
-                    distance = math.sqrt(distance)
-                    if (distance < minDistance):
-                        minCluster = k
-                        minDistance = distance
-                self.clusters[minCluster].current_members.add(i)
-
-        # Check if converged
-            for cluster in self.clusters:
-                if(cluster.current_members == cluster.previous_members):
-                    converged = True
-                else:
-                    converged = False
+        # Step 2: Generate a new partition by assigning each datapoint to its closest cluster center
+        # Step 3: recalculate cluster centers
+        # Step 4: repeat until clustermembership stabilizes
         pass
 
     def test(self):
@@ -81,22 +61,6 @@ class KMeans:
         # count number of hits
         # count number of requests
         # set the global variables hitrate and accuracy to their appropriate value
-        hits = 0
-        requests = 0
-        prefetch = 0
-        for cluster in self.clusters:
-            for member in cluster.current_members:
-                for i in range (self.dim):
-                    if ((cluster.prototype[i] > self.prefetch_threshold)
-                        and (self.testdata[member][i] > self.prefetch_threshold)):
-                        hits += 1 
-                    if (self.testdata[member][i] > self.prefetch_threshold):
-                        requests += 1
-                    if (cluster.prototype[i] > self.prefetch_threshold):
-                        prefetch += 1
-
-        self.accuracy = hits/prefetch
-        self.hitrate = hits/requests
         pass
 
 
