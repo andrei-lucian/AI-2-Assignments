@@ -17,28 +17,28 @@ class Kohonen:
         self.testdata = testdata
         self.dim = dim
 
-        # A 2-dimensional list of clusters. Size == N x N
+        ## A 2-dimensional list of clusters. Size == N x N
         self.clusters = [[Cluster(dim) for _ in range(n)] for _ in range(n)]
-        # Threshold above which the corresponding html is prefetched
+        ## Threshold above which the corresponding html is prefetched
         self.prefetch_threshold = 0.5
         self.initial_learning_rate = 0.8
-        # The accuracy and hitrate are the performance metrics (i.e. the results)
+        ## The accuracy and hitrate are the performance metrics (i.e. the results)
         self.accuracy = 0
         self.hitrate = 0
-        # Initialise N x N clusters
+        ## Initialise N x N clusters
         for x in range(n):
             for y in range(n):
                 self.clusters[x][y].prototype = self.traindata[r.randint(0,len(self.traindata)-1)]
                 print(self.clusters[x][y].prototype)
 
     def train(self):
-        # Step 1: initialize map with random vectors (A good place to do this, is in the initialisation of the clusters)
-        # Repeat 'epochs' times:
-        #     Step 2: Calculate the squareSize and the learningRate, these decrease linearly with the number of epochs.
-        #     Step 3: Every input vector is presented to the map (always in the same order)
-        #     For each vector its Best Matching Unit is found, and :
-        #         Step 4: All nodes within the neighbourhood of the BMU are changed, you don't have to use distance relative learning.
-        # Since training kohonen maps can take quite a while, presenting the user with a progress bar would be nice
+        ## Step 1: initialize map with random vectors (A good place to do this, is in the initialisation of the clusters)
+        ## Repeat 'epochs' times:
+        ##     Step 2: Calculate the squareSize and the learningRate, these decrease linearly with the number of epochs.
+        ##     Step 3: Every input vector is presented to the map (always in the same order)
+        ##     For each vector its Best Matching Unit is found, and :
+        ##         Step 4: All nodes within the neighbourhood of the BMU are changed, you don't have to use distance relative learning.
+        ## Since training kohonen maps can take quite a while, presenting the user with a progress bar would be nice
         r = 0
         eta = 0 
         for currEpoch in range(self.epochs):
@@ -76,30 +76,30 @@ class Kohonen:
                 self.clusters[minX][minY].current_members.add(i)
 
     def test(self):
-        # iterate along all clients
+        ## iterate along all clients
         hits = 0
         requests = 0
         prefetch = 0
 
-        # for each client find the cluster of which it is a member
+        ## for each client find the cluster of which it is a member
         for client in range(len(self.traindata)):
             for i in range(self.n):
                 for j in range(self.n):
                     if (client in self.clusters[i][j].current_members):
                         owner = self.clusters[i][j]
-            # get the actual testData (the vector) of this client
+            ## get the actual testData (the vector) of this client
             test = self.testdata[client]
-            # iterate along all dimensions
+            ## iterate along all dimensions
             for i in range(self.dim):
                 if(owner.prototype[i] > self.prefetch_threshold and 
                     test[i] > self.prefetch_threshold):
-                    hits += 1         # count number of hits
+                    hits += 1         ## count number of hits
                 if(test[i] > self.prefetch_threshold):
-                    requests += 1     # count number of requests
+                    requests += 1     ## count number of requests
                 if(owner.prototype[i] > self.prefetch_threshold):
-                    prefetch += 1     # count prefetched htmls
+                    prefetch += 1     ## count prefetched htmls
 
-        # set the global variables hitrate and accuracy to their appropriate value
+        ## set the global variables hitrate and accuracy to their appropriate value
         self.accuracy = hits/prefetch
         self.hitrate = hits/requests
 
