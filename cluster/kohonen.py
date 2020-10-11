@@ -26,18 +26,14 @@ class Kohonen:
         self.accuracy = 0
         self.hitrate = 0
         ## Initialise N x N clusters
+        ## Step 1: initialize map with random vectors (A good place to do this, is in the initialisation of the clusters)
         for x in range(n):
             for y in range(n):
                 self.clusters[x][y].prototype = self.traindata[r.randint(0,len(self.traindata)-1)]
 
     def train(self):
-        ## Step 1: initialize map with random vectors (A good place to do this, is in the initialisation of the clusters)
         ## Repeat 'epochs' times:
-        ##     Step 2: Calculate the squareSize and the learningRate, these decrease linearly with the number of epochs.
-        ##     Step 3: Every input vector is presented to the map (always in the same order)
-        ##     For each vector its Best Matching Unit is found, and :
-        ##     Step 4: All nodes within the neighbourhood of the BMU are changed, you don't have to use distance relative learning.
-
+        ## Step 2: Calculate the squareSize and the learningRate, these decrease linearly with the number of epochs.
         for curr_epoch in range(self.epochs):
             learning_rate = self.initial_learning_rate * (1 - curr_epoch/self.epochs)
             radius = self.n/2 * (1 - curr_epoch/self.epochs)
@@ -45,7 +41,9 @@ class Kohonen:
             for dim_1 in range(self.n):
                 for dim_2 in range(self.n):
                     self.clusters[dim_1][dim_2].current_members.clear()
-            
+
+            ## Step 3: Every input vector is presented to the map (always in the same order)
+            ## For each vector its Best Matching Unit is found
             for idx in range(len(self.traindata)-1):
                 distance = 0
                 min_dist = float('inf')
@@ -54,22 +52,26 @@ class Kohonen:
                         for vect_dim in range(self.dim):
                             distance += math.pow(self.clusters[dim_1][dim_2].prototype[vect_dim] - self.traindata[idx][vect_dim], 2)
                         distance = math.sqrt(distance)
+                        ## Store the indices of the best matching unig
                         if (distance <= min_dist):
                             min_d1 = dim_1
                             min_d2 = dim_2
                             min_dist = distance
 
+                ## Step 4: All nodes within the neighbourhood of the BMU are changed, 
+                # you don't have to use distance relative learning.
                 upper_bound_d1 = min(self.n-1, min_d1 + int(radius))
                 lower_bound_d1 = max(0, min_d1 - int(radius))
                 upper_bound_d2 = min(self.n - 1, min_d2 + int(radius))
                 lower_bound_d2 = max(0, min_d2 - int(radius))
-                
+
                 for dim_1 in range(lower_bound_d1, upper_bound_d1):
                     for dim_2 in range(lower_bound_d2, upper_bound_d2):
                         cluster = self.clusters[dim_1][dim_2]
                         new_prot = []
                         for vect_dim in range(self.dim):
-                            new_prot.append(float((1-learning_rate) * cluster.prototype[vect_dim] + learning_rate * self.traindata[idx][vect_dim]))
+                            new_prot.append(float((1-learning_rate) * cluster.prototype[vect_dim] 
+                            + learning_rate * self.traindata[idx][vect_dim]))
                         self.clusters[dim_1][dim_2].prototype = new_prot
                 self.clusters[min_d1][min_d2].current_members.add(idx)
 
@@ -81,20 +83,22 @@ class Kohonen:
 
         ## for each client find the cluster of which it is a member
         for client in range(len(self.traindata)):
-            for i in range(self.n):
-                for j in range(self.n):
-                    if (client in self.clusters[i][j].current_members):
-                        owner = self.clusters[i][j]
+            for dim_1 in range(self.n):
+                for dim_2 in range(self.n):
+                    if (client in self.clusters[dim_1][dim_2].current_members):
+                        owner = self.clusters[dim_1][dim_2]
+
             ## get the actual testData (the vector) of this client
             test = self.testdata[client]
+
             ## iterate along all dimensions
-            for i in range(self.dim):
-                if(owner.prototype[i] > self.prefetch_threshold and 
-                    test[i] > self.prefetch_threshold):
+            for vect_dim in range(self.dim):
+                if(owner.prototype[vect_dim] > self.prefetch_threshold and 
+                    test[vect_dim] > self.prefetch_threshold):
                     hits += 1         ## count number of hits
-                if(test[i] > self.prefetch_threshold):
+                if(test[vect_dim] > self.prefetch_threshold):
                     requests += 1     ## count number of requests
-                if(owner.prototype[i] > self.prefetch_threshold):
+                if(owner.prototype[vect_dim] > self.prefetch_threshold):
                     prefetch += 1     ## count prefetched htmls
 
         ## set the global variables hitrate and accuracy to their appropriate value
