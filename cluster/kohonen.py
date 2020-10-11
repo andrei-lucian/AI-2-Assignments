@@ -36,43 +36,42 @@ class Kohonen:
         ##     Step 2: Calculate the squareSize and the learningRate, these decrease linearly with the number of epochs.
         ##     Step 3: Every input vector is presented to the map (always in the same order)
         ##     For each vector its Best Matching Unit is found, and :
-        ##         Step 4: All nodes within the neighbourhood of the BMU are changed, you don't have to use distance relative learning.
-        ## Since training kohonen maps can take quite a while, presenting the user with a progress bar would be nice
-        r = 0
-        eta = 0 
-        for currEpoch in range(self.epochs):
-            eta = self.initial_learning_rate * (1 - currEpoch/self.epochs)
-            r = self.n/2 * (1 - currEpoch/self.epochs)
+        ##     Step 4: All nodes within the neighbourhood of the BMU are changed, you don't have to use distance relative learning.
 
-            for i in range(self.n):
-                for j in range(self.n):
-                    self.clusters[i][j].current_members.clear()
+        for curr_epoch in range(self.epochs):
+            learning_rate = self.initial_learning_rate * (1 - curr_epoch/self.epochs)
+            radius = self.n/2 * (1 - curr_epoch/self.epochs)
+
+            for dim_1 in range(self.n):
+                for dim_2 in range(self.n):
+                    self.clusters[dim_1][dim_2].current_members.clear()
             
-            for i in range(len(self.traindata)-1):
-                minX = 0
-                minY = 0
+            for idx in range(len(self.traindata)-1):
                 distance = 0
-                minDistance = float('inf')
-                for j in range(self.n):
-                    for k in range(self.n):
-                        for m in range(self.dim):
-                            distance += math.pow(self.clusters[j][k].prototype[m] - self.traindata[i][m], 2)
+                min_dist = float('inf')
+                for dim_1 in range(self.n):
+                    for dim_2 in range(self.n):
+                        for vect_dim in range(self.dim):
+                            distance += math.pow(self.clusters[dim_1][dim_2].prototype[vect_dim] - self.traindata[idx][vect_dim], 2)
                         distance = math.sqrt(distance)
-                        if (distance <= minDistance):
-                            minX = j
-                            minY = k
-                            minDistance = distance
+                        if (distance <= min_dist):
+                            min_d1 = dim_1
+                            min_d2 = dim_2
+                            min_dist = distance
 
-                upperBoundX = min(self.n-1, minX + int(r))
-                for n in range(max(0, minX - int(r)), upperBoundX):
-                    upperBoundY = min(self.n - 1, minY + int(r))
-                    for o in range(max(0, minY - int(r)), upperBoundY):
-                        c = self.clusters[n][o]
-                        newPrototype = []
-                        for p in range(self.dim):
-                            newPrototype.append(float((1-eta) * c.prototype[p] + eta * self.traindata[i][p]))
-                        self.clusters[n][o].prototype = newPrototype
-                self.clusters[minX][minY].current_members.add(i)
+                upper_bound_d1 = min(self.n-1, min_d1 + int(radius))
+                lower_bound_d1 = max(0, min_d1 - int(radius))
+                upper_bound_d2 = min(self.n - 1, min_d2 + int(radius))
+                lower_bound_d2 = max(0, min_d2 - int(radius))
+                
+                for dim_1 in range(lower_bound_d1, upper_bound_d1):
+                    for dim_2 in range(lower_bound_d2, upper_bound_d2):
+                        cluster = self.clusters[dim_1][dim_2]
+                        new_prot = []
+                        for vect_dim in range(self.dim):
+                            new_prot.append(float((1-learning_rate) * cluster.prototype[vect_dim] + learning_rate * self.traindata[idx][vect_dim]))
+                        self.clusters[dim_1][dim_2].prototype = new_prot
+                self.clusters[min_d1][min_d2].current_members.add(idx)
 
     def test(self):
         ## iterate along all clients
