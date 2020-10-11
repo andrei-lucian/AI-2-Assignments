@@ -30,6 +30,19 @@ class KMeans:
         self.accuracy = 0
         self.hitrate = 0
 
+    def calcPrototype(self):
+        for cluster in (self.clusters): # Loop through each cluster
+            for member in (cluster.current_members): # Loop through each member in each cluster
+                for j in range(200): 
+                    cluster.prototype[j] += self.traindata[member][j] # Add the member vector values to prototype                
+            for j in range(200):
+                if (len(cluster.current_members) > 0):
+                    cluster.prototype[j] /= len(cluster.current_members) # Average prototype
+
+            cluster.previous_members.clear() 
+            cluster.previous_members.update(cluster.current_members)
+            cluster.current_members.clear()        
+
     def train(self):
         # implement k-means algorithm here:
         # Step 1: Select an initial random partioning with k clusters
@@ -39,16 +52,8 @@ class KMeans:
         # Calculate prototype and previousMembers for each cluster
         converged = False
         while not converged:
-            for cluster in (self.clusters): # Loop through each cluster
-                for member in (cluster.current_members): # Loop through each member in each cluster
-                    for j in range(200): 
-                        cluster.prototype[j] += self.traindata[member][j] # Add the member vector values to prototype                
-                for j in range(200):
-                    cluster.prototype[j] /= len(cluster.current_members) # Average prototype
+            self.calcPrototype()
 
-                cluster.previous_members.clear() 
-                cluster.previous_members.update(cluster.current_members)
-                cluster.current_members.clear()
         
         # Calculate distance of each data point to each cluster and reassign their positions accordingly
             for i in range(len(self.traindata)):

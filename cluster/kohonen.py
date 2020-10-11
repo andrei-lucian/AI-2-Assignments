@@ -29,7 +29,6 @@ class Kohonen:
         for x in range(n):
             for y in range(n):
                 self.clusters[x][y].prototype = self.traindata[r.randint(0,len(self.traindata)-1)]
-                print(self.clusters[x][y].prototype)
 
     def train(self):
         ## Step 1: initialize map with random vectors (A good place to do this, is in the initialisation of the clusters)
