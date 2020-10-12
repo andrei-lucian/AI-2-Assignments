@@ -19,33 +19,32 @@ class Kohonen:
 
         ## A 2-dimensional list of clusters. Size == N x N
         self.clusters = [[Cluster(dim) for _ in range(n)] for _ in range(n)]
-        ## Threshold above which the corresponding html is prefetched
-        self.prefetch_threshold = 0.5
+        self.prefetch_threshold = 0.5    ## Threshold above which the corresponding html is prefetched
         self.initial_learning_rate = 0.8
-        ## The accuracy and hitrate are the performance metrics (i.e. the results)
-        self.accuracy = 0
+       
+        self.accuracy = 0                ## The accuracy and hitrate are the performance metrics (i.e. the results)
         self.hitrate = 0
-        ## Initialise hits, requests, and prefetches
-        self.hits = 0
+        
+        self.hits = 0                    ## Initialise hits, requests, and prefetches
         self.requests = 0
         self.prefetch = 0
-        ## Initialise owner cluster object
-        self.owner = Cluster(dim)
-        ## Initialise inidices of closest clusters
-        self.min_d1 = 0
+        
+        self.owner = Cluster(dim)        ## Initialise owner cluster object
+        
+        self.min_d1 = 0                  ## Initialise inidices of closest clusters
         self.min_d2 = 0
-        ## Initialise upper and lower bounds for neighbourhood of clusters
-        self.upper_bound_d1 = 0
+        
+        self.upper_bound_d1 = 0          ## Initialise upper and lower bounds for neighbourhood of clusters
         self.lower_bound_d1 = 0
         self.upper_bound_d2 = 0
         self.lower_bound_d2 = 0
-        ## Initialise radius and learning rate
-        self.radius = 0
+        
+        self.radius = 0                  ## Initialise radius and learning rate
         self.learning_rate = 0
-        ## Initialise index of current training data vector
-        self.currIdx = 0 
-        ## Initialise map of N x N clusters with random input vectors
-        for x in range(n):
+        
+        self.currIdx = 0                 ## Initialise index of current training data vector
+        
+        for x in range(n):               ## Initialise map of N x N clusters with random input vectors
             for y in range(n):
                 self.clusters[x][y].prototype = self.traindata[r.randint(0,len(self.traindata)-1)]
 
@@ -102,13 +101,13 @@ class Kohonen:
         for vect_dim in range(self.dim):
             if(self.owner.prototype[vect_dim] > self.prefetch_threshold and 
                 self.testdata[client][vect_dim] > self.prefetch_threshold):
-                self.hits += 1         ## count number of hits
+                self.hits += 1         ## Count number of hits
 
             if(self.testdata[client][vect_dim] > self.prefetch_threshold):
-                self.requests += 1     ## count number of requests
+                self.requests += 1     ## Count number of requests
 
             if(self.owner.prototype[vect_dim] > self.prefetch_threshold):
-                self.prefetch += 1     ## count prefetched htmls
+                self.prefetch += 1     ## Count prefetched URLs
 
     def train(self):
         ## Repeat 'epochs' times:
@@ -124,7 +123,7 @@ class Kohonen:
             for self.currIdx in range(len(self.traindata)-1): 
 
                 ## For each vector its Best Matching Unit is found  
-                self.findBMU()           
+                self.findBMU()
 
                  ## Calculate neighbourhood of BMU                                 
                 self.calculateNeighbourhood()    

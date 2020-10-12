@@ -13,7 +13,6 @@ class Cluster:
         self.current_members = set()
         self.previous_members = set()
 
-
 class KMeans:
     def __init__(self, k, traindata, testdata, dim):
         self.traindata = traindata
@@ -31,7 +30,7 @@ class KMeans:
         self.hitrate = 0
 
     def setCurrentMembers(self, cluster):
-        ## Set current member depending on previous member
+        ## Set previous_members to current_members and clear current_members
         cluster.previous_members.clear() 
         cluster.previous_members.update(cluster.current_members)
         cluster.current_members.clear()
@@ -48,17 +47,18 @@ class KMeans:
             self.setCurrentMembers(cluster)
 
     def calcDistance(self):
-        ## Loop through each data point in cluster
+        ## Loop through each input vector
         for i in range(len(self.traindata)):
             minDistance = float('inf')
             minCluster = 0
+            ## Loop through each cluster
             for k in range (len(self.clusters)):
                 distance = 0
-                ## Calculate distance for each data point
+                ## Calculate distance from input vector to cluster
                 for j in range(self.dim):
                     distance += math.pow(self.traindata[i][j] - self.clusters[k].prototype[j], 2)
                 distance = math.sqrt(distance)
-                ## Select cluster with smallest distance from data point
+                ## Select cluster with smallest distance from input vector
                 if (distance < minDistance):
                     minCluster = k
                     minDistance = distance
@@ -86,10 +86,10 @@ class KMeans:
         hits = 0
         requests = 0
         prefetch = 0
-        ## iterate along all clients. Assumption: the same clients are in the same order as in the testData
+        ## Iterate along all clients. Assumption: the same clients are in the same order as in the testData
         for cluster in self.clusters:
             for member in cluster.current_members:
-                for i in range (self.dim): ## iterate along all dimensions
+                for i in range (self.dim): ## Iterate along all dimensions
                     if ((cluster.prototype[i] > self.prefetch_threshold) ## count number of hits
                         and (self.testdata[member][i] > self.prefetch_threshold)):
                         hits += 1 
